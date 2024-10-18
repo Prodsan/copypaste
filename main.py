@@ -48,6 +48,10 @@ class Parser:
                 href_string = "data-to-posting"
             href = str(ad[href_string])
             log.debug(href)
+            if self.website == "https://www.milanuncios.com":
+                href_string = "data-to-posting"
+            href = str(ad[href_string])
+            log.debug(href)
             if self.website == "https://inmuebles.mercadolibre.com.ar":
                 # Y en este caso mercadolibre jode la url, asique la parseamos para poder armar el hash
                 href_para_id = href.split("/")[-1].split("#")[0]
@@ -70,8 +74,8 @@ parsers = [
         link_regex="div.listing__items div.listing__item a",
     ),
     Parser(
-        website="https://www.zonaprop.com.ar",
-        link_regex="div.postings-container div.sc-1tt2vbg-5 div.sc-i1odl-0",
+        website="https://www.milanuncios.com",
+        link_regex="div.ma-AdList div.ma-AdCardV2-row",
     ),
     Parser(
         website="https://inmuebles.mercadolibre.com.ar",

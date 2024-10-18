@@ -1,9 +1,5 @@
 # Argenprop
 https://www.argenprop.com/departamento-alquiler-hasta-45000-pesos-solo
 
-# Zonaprop
-https://www.zonaprop.com.ar/inmuebles-alquiler-menos-45000-pesos-orden-publicado-descendente.html
-
 # Milanuncios
 https://www.milanuncios.com/viviendas/?desde=70000&hasta=130000&demanda=n&latitude=37.2619585&longitude=-6.9427327&distance=3000&geoProvinceId=21&geolocationTerm=Huelva&m2h=75&orden=date&fromSearch=1&hitOrigin=listing
-
