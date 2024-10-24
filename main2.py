@@ -7,9 +7,21 @@ from dataclasses import dataclass
 from time import sleep
 import random
 import logging
+import re
 
-scraper = cloudscraper.create_scraper()
-
+scraper = cloudscraper.create_scraper(
+browser={
+        "browser": "chrome",
+        "platform": "windows",
+    },
+    )
+headers = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-GB,en;q=0.5',
+    'DNT': '1',
+    'Sec-GPC': '1',
+    'Connection': 'keep-alive',
+}
 TOKEN = os.environ.get("TOKEN", "")
 room = os.environ.get("ROOM", "")
 horas = os.environ.get("HORAS", 3)
@@ -23,7 +35,7 @@ logging.basicConfig(
 )
 
 log = logging
-urlbusqueda = '/viviendas/?desde=85000&hasta=120000&latitude=37.2619585&longitude=-6.9427327&distance=5000&geoProvinceId=21&geolocationTerm=Huelva&orden=date&fromSearch=1'
+
 
 @dataclass
 class Parser:
@@ -33,9 +45,10 @@ class Parser:
     def extract_links(self, contents: str):
         """Esta función extrae los elementos de las paginas para poder obtener los links a las publicaciones"""
         soup = BeautifulSoup(contents, "html.parser")
-        log.debug(soup)
+        #log.debug(soup)
         ads = soup.select(self.link_regex)
         log.debug("=" * 50)
+        #logging.info("ads: {} ".format(ads))
         log.debug(ads)
         log.debug("=" * 50)
         log.debug(ads)
@@ -44,24 +57,24 @@ class Parser:
             href_string = (
                 "href"  # Usamos href porque los sitios suelen usar href, menos zonaprop
             )
-            if self.website == "https://www.zonaprop.com.ar":
-                href_string = "data-to-posting"
-            # Verificar si ad[href_string] no es None
-            if ad.get(href_string) is not None:
-                href = str(ad[href_string])
-            else:
-                href = urlbusqueda
-            
-            log.debug(href)
-            if self.website == "https://inmuebles.mercadolibre.com.ar":
-                # Y en este caso mercadolibre jode la url, asique la parseamos para poder armar el hash
-                href_para_id = href.split("/")[-1].split("#")[0]
-                # Este id es el que luego guardamos en un txt para ver si ya vimos o no el sitio
-                _id = sha1(href_para_id.encode("utf-8")).hexdigest()
-                yield {"id": _id, "url": href}
-            else:
-                _id = sha1(href.encode("utf-8")).hexdigest()
-                yield {"id": _id, "url": "{}{}".format(self.website, href)}
+            #if self.website == "https://www.zonaprop.com.ar":
+            #    href_string = "data-to-posting"
+            #href = str(ad[href_string])
+            #log.debug(href)
+            if self.website == "https://www.milanuncios.com":
+                href_string = "href"
+            href = str(['{}'.format(href_string)])
+            #log.debug(href)
+            #logging.info("href: {} ".format(href))
+            # if self.website == "https://inmuebles.mercadolibre.com.ar":
+            #     # Y en este caso mercadolibre jode la url, asique la parseamos para poder armar el hash
+            #     href_para_id = href.split("/")[-1].split("#")[0]
+            #     # Este id es el que luego guardamos en un txt para ver si ya vimos o no el sitio
+            #     _id = sha1(href_para_id.encode("utf-8")).hexdigest()
+            #     yield {"id": _id, "url": href}
+            # else:
+            #     _id = sha1(href.encode("utf-8")).hexdigest()
+            #     yield {"id": _id, "url": "{}{}".format(self.website, href)}
 
 
 # Acá se definen los sitios que queremos mirar y como llegar al lugar donde esta la url de la publicación
@@ -69,18 +82,30 @@ class Parser:
 # Cada parser define el dominio principal del sitio y el regex que hay que hacer para ir a buscar la property donde esta el link a la publicación
 # Cada pagina hace lo que quiere acá, asique probablemente esto haya que ir actualizandolo a medida que vayan implementando cambios
 
+
+# Función para obtener la lista de proxies desde el enlace
+def obtener_proxies(url):
+    response = cloudscraper.create_scraper().get(url)
+    proxies = re.findall(r'\d+\.\d+\.\d+\.\d+:\d+', response.text)
+    logging.info("lista proxies -  {} ".format(proxies))
+    return proxies
+
+# URL de la lista de proxies
+url_proxies = 'https://raw.githubusercontent.com/Prodsan/copypaste/refs/heads/main/proxys.txt'
+
+
 parsers = [
     Parser(
         website="https://www.argenprop.com",
         link_regex="div.listing__items div.listing__item a",
     ),
     Parser(
-        website="https://www.zonaprop.com.ar",
-        link_regex="div.postings-container div.sc-1tt2vbg-5 div.sc-i1odl-0",
+        website="https://www.milanuncios.com",
+        link_regex="div.ma-AdCardV2-row a",
     ),
     Parser(
-        website="https://www.milanuncios.com",
-        link_regex="div.ma-AdList a.ma-AdCardListingV2-TitleLink",
+        website="https://inmuebles.mercadolibre.com.ar",
+        link_regex="div.ui-search-item__group__element a",
     ),
 ]
 
@@ -94,7 +119,20 @@ def main():
             sitio = url.split(".com")[0].split("/")[-1].split(".")[1]
             logging.info("Mirando {} ...".format(sitio))
             try:
-                res = scraper.get(url)
+                # Obtener la lista de proxies
+                proxies_list = obtener_proxies(url_proxies)
+                # Seleccionar un proxy aleatorio
+                proxy = random.choice(proxies_list)
+                logging.info("Proxy seleccionado: {} ".format(proxy))
+                
+                # Configurar Cloudscraper con el proxy seleccionado
+                scraper = cloudscraper.create_scraper()
+                scraper.proxies = {
+                    'http': f'http://{proxy}',
+                    'https': f'https://{proxy}',
+                }
+                
+                res = scraper.get(url, proxies={"http": proxy, "https": proxy}, headers=headers)
             except Exception as e:
                 logging.error("Error al mirar {}".format(sitio))
                 logging.error(e)
@@ -114,13 +152,12 @@ def main():
                         # Durmiendo para no saturar la api de telegram -> Limite de 20 mensajes en 1 minuto
                         api_calls = 0
                         logging.info("Durmiendo para no saturar la api de telegram")
-                        random_sleep(30)
+                        random_sleep(60)
                     notify(post)
 
             mark_as_seen(unseen)
             logging.info("Durmiendo entre sitio y sitio")
-            
-            random_sleep(27)
+            random_sleep(30)
         else:
             logging.debug(
                 f"No miramos '{url}', porque probablemente no sea un sitio. En caso de que lo sea, ponele el http:// o https://"
@@ -129,7 +166,7 @@ def main():
 
 def random_sleep(seconds):
     """Sleeps sort of a random time, but close to the seconds provided. This is to avoid the firewall blocking of the servers"""
-    random_seconds = seconds + random.randint(seconds - 6, seconds + 9)*60
+    random_seconds = seconds + random.randint(seconds - 6, seconds + 9)
     logging.debug(f"Durmiendo {random_seconds} segundos")
     sleep(random_seconds)
 
@@ -149,10 +186,10 @@ def read_txt(file_to_read):
 def extract_ads(url, text):
     """Extrae los links de las publicaciones"""
     uri = urlparse(url)
-    logging.debug(uri)
+    #logging.debug(uri)
     logging.debug(uri.hostname)
     parser = next(p for p in parsers if uri.hostname in p.website)
-    logging.debug(parser)
+    #logging.debug(parser)
     return parser.extract_links(text)
 
 
@@ -196,6 +233,7 @@ def skips_url(post):
 
 while __name__ == "__main__":
     main()
-    for x in range(1, minutos):
-        logging.debug(f"Faltan {minutos -x} minutos")
-        
+    #logging.info(f"Esperando {minutos} minutos, osea {horas} horas")
+    #for x in range(1, minutos):
+    #    random_sleep(60)
+    #    logging.debug(f"Faltan {minutos -x} minutos")

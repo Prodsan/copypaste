@@ -1,5 +1,1 @@
-# Argenprop
-https://www.argenprop.com/departamento-alquiler-hasta-45000-pesos-solo
-
-# Milanuncios
-https://www.milanuncios.com/viviendas/?desde=70000&hasta=130000&demanda=n&latitude=37.2619585&longitude=-6.9427327&distance=3000&geoProvinceId=21&geolocationTerm=Huelva&m2h=75&orden=date&fromSearch=1&hitOrigin=listing
+https://www.milanuncios.com/viviendas/?desde=50000&hasta=120000&demanda=n&vendedor=part&latitude=37.2450391&longitude=-6.950587&distance=3000&geoProvinceId=21&geolocationTerm=C.%20Manuel%20de%20Falla%2C%20Huelva&m2d=70&m2h=165&orden=date&fromSearch=1&hitOrigin=listing
